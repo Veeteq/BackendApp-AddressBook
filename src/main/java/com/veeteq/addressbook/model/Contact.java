@@ -5,7 +5,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -89,6 +88,10 @@ public abstract class Contact<T extends Contact<T>> extends BaseEntity<T> {
     public T addToTags(String tag) {
         this.tags.add(tag);
         return (T) this;
+    }
+
+    public Integer getVersion() {
+        return version;
     }
 
     @Override

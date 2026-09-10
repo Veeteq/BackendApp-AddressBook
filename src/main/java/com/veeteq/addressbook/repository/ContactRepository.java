@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface ContactRepository<T extends Contact> extends JpaRepository<T, Long> {
+public interface ContactRepository extends JpaRepository<Contact, Long> {
 
     @Query(value = """
             SELECT c
@@ -17,4 +17,7 @@ public interface ContactRepository<T extends Contact> extends JpaRepository<T, L
                 OR LOWER(c.displayName) LIKE %:name%
                 OR LOWER(CONCAT(c.firstName, c.lastName)) LIKE %:name%""")
     Page<Contact> findByNameContainingIgnoreCase(@Param("name") String name, PageRequest pageRequest);
+
+    @Query(value = "select next value for contacts_seq", nativeQuery = true)
+    Long getId();
 }

@@ -16,7 +16,7 @@ import java.util.UUID;
 @Profile(value = "default")
 public class AddressBookLoader implements ApplicationRunner {
 
-    private final ContactRepository<Contact> contactRepository;
+    private final ContactRepository contactRepository;
 
     public AddressBookLoader(ContactRepository contactRepository) {
         this.contactRepository = contactRepository;
@@ -39,9 +39,11 @@ public class AddressBookLoader implements ApplicationRunner {
                 .setId(getRandomLong())
                 .setFirstName(getRandomString())
                 .setLastName(getRandomString())
+                .setDisplayName(getRandomString())
+                .setBankAccountNumber(getRandomString())
                 .setAddress(new Address()
                         .setCity(getRandomString())
-                        .setPostcode(getRandomString())
+                        .setPostcode(getRandomString().substring(0, 10))
                         .setStreet(getRandomString())
                         .setCountry(getRandomString()))
                 .setTags(Set.of("tag1", "tag2"));
@@ -54,13 +56,17 @@ public class AddressBookLoader implements ApplicationRunner {
         var company = new Company()
                 .setId(getRandomLong())
                 .setName(getRandomString())
+                .setDisplayName(getRandomString())
+                .setBankAccountNumber(getRandomString())
+                .setTaxId(getRandomString())
                 .setAddress(new Address()
                         .setCity(getRandomString())
-                        .setPostcode(getRandomString())
+                        .setPostcode(getRandomString().substring(0, 10))
                         .setStreet(getRandomString())
                         .setCountry(getRandomString()))
                 .setTags(Set.of("tag3", "tag4"));
-        return company;
+        var saved = contactRepository.save(company);
+        return saved;
     }
 
     private Employee loadEmployee() {
@@ -68,15 +74,17 @@ public class AddressBookLoader implements ApplicationRunner {
                 .setId(getRandomLong())
                 .setFirstName(getRandomString())
                 .setLastName(getRandomString())
+                .setBankAccountNumber(getRandomString())
                 .setJob(getRandomString())
                 .setSalary(getRandomDouble())
                 .setAddress(new Address()
                         .setCity(getRandomString())
-                        .setPostcode(getRandomString())
+                        .setPostcode(getRandomString().substring(0, 10))
                         .setStreet(getRandomString())
                         .setCountry(getRandomString()))
                 .setTags(Set.of("tag2", "tag4"));
-        return employee;
+        var saved = contactRepository.save(employee);
+        return saved;
     }
 
     private static String getRandomString() {
