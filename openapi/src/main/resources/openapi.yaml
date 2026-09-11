@@ -49,7 +49,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Contact'
+              $ref: '#/components/schemas/ContactRequest'
       responses:
         '200':
           description: Contact updated successfully
@@ -82,7 +82,7 @@ paths:
     get:
       tags:
         - contacts
-      summary: Search contacts by name
+      summary: Get all contacts (pageable)
       operationId: getContacts
       parameters:
         - name: name
@@ -120,7 +120,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Contact'
+              $ref: '#/components/schemas/ContactRequest'
       responses:
         '201':
           description: Contact created successfully
@@ -165,21 +165,21 @@ components:
   schemas:
     Contact:
       type: object
+      discriminator:
+        propertyName: contactType
+        mapping:
+          PERSON: '#/components/schemas/Person'
+          COMPANY: '#/components/schemas/Company'
+      required:
+        - contactType
       properties:
+        contactType:
+          type: string
         id:
           type: integer
           format: int64
         address:
           $ref: '#/components/schemas/Address'
-        contactType:
-          type: string
-          enum: [company, person]
-        firstName:
-          type: string
-        lastName:
-          type: string
-        companyName:
-          type: string            
         displayName:
           type: string
         taxId:
@@ -190,9 +190,27 @@ components:
           type: array
           items:
             type: string
-          example: ["tag1", "tag2", "tag3"]
-      required:
-        - contactType
+          example: [ "tag1", "tag2", "tag3" ]
+        version:
+          type: integer
+    Company:
+      allOf:
+        - $ref: '#/components/schemas/Contact'
+        - type: object
+          properties:
+            companyName:
+              type: string
+            taxId:
+              type: string
+    Person:
+      allOf:
+        - $ref: '#/components/schemas/Contact'
+        - type: object
+          properties:
+            firstName:
+              type: string
+            lastName:
+              type: string
     Address:
       type: object
       properties:
@@ -209,7 +227,62 @@ components:
         - postcode
         - city
         - street
-
+    ContactRequest:
+      type: object
+      discriminator:
+        propertyName: contactType
+        mapping:
+          PERSON: '#/components/schemas/PersonRequest'
+          COMPANY: '#/components/schemas/CompanyRequest'
+      required:
+        - contactType
+      properties:
+        contactType:
+          type: string
+        address:
+          $ref: '#/components/schemas/Address'
+        displayName:
+          type: string
+        bankAccountNumber:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+          example: [ "tag1", "tag2", "tag3" ]
+    CompanyRequest:
+      allOf:
+        - $ref: '#/components/schemas/ContactRequest'
+        - type: object
+          required:
+            - companyName
+          properties:
+            companyName:
+              type: string
+            taxId:
+              type: string
+    PersonRequest:
+      allOf:
+        - $ref: '#/components/schemas/ContactRequest'
+        - type: object
+          required:
+            - firstName
+            - lastName
+          properties:
+            firstName:
+              type: string
+            lastName:
+              type: string
+    ContactsResponse:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Contact'
+          additionalProperties: true
     ContactsPageResponse:
       type: object
       properties:
