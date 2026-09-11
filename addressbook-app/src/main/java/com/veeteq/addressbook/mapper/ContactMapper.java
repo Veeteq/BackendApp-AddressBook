@@ -52,7 +52,7 @@ public class ContactMapper {
         var dto = new ContactsResponseDto()
                 .currentPage(result.getNumber())
                 .pageSize(result.getSize())
-                .totalItems(result.getNumberOfElements())
+                .totalItems(result.getTotalElements())
                 .totalPages(result.getTotalPages())
                 .data(data);
         return dto;
@@ -89,6 +89,7 @@ public class ContactMapper {
     }
 
     private AddressDto toDto(Address entity) {
+        if (entity == null) return null;
         var dto = new AddressDto()
                 .city(entity.getCity())
                 .postcode(entity.getPostcode())
