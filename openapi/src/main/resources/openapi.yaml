@@ -1,0 +1,311 @@
+openapi: 3.0.0
+info:
+  title: Address Book API
+  version: 1.0.0
+  description: A REST API for managing an Address Book.
+
+servers:
+  - url: http://localhost:8083/api
+    description: Main API server
+
+paths:
+  /contacts/{id}:
+    get:
+      tags:
+        - contacts
+      summary: Get a single contact by ID
+      operationId: getContactById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: A contact object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contact'
+        '404':
+          description: Contact not found
+
+    put:
+      tags:
+        - contacts
+      summary: Update a contact by ID
+      operationId: updateContact
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactRequest'
+      responses:
+        '200':
+          description: Contact updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contact'
+        '404':
+          description: Contact not found
+
+    delete:
+      tags:
+        - contacts
+      summary: Delete a contact by ID
+      operationId: deleteContact
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Contact deleted successfully
+        '404':
+          description: Contact not found
+
+  /contacts:
+    get:
+      tags:
+        - contacts
+      summary: Get all contacts (pageable)
+      operationId: getContacts
+      parameters:
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: A paginated list of contacts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactsPageResponse'
+
+    post:
+      tags:
+        - contacts
+      summary: Create a new contact
+      operationId: createContact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactRequest'
+      responses:
+        '201':
+          description: Contact created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contact'
+
+  /contacts/search:
+    get:
+      tags:
+        - contacts
+      summary: Search contacts by name
+      operationId: searchContacts
+      parameters:
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: A paginated list of contacts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactsPageResponse'
+
+components:
+  schemas:
+    Contact:
+      type: object
+      discriminator:
+        propertyName: contactType
+        mapping:
+          PERSON: '#/components/schemas/Person'
+          COMPANY: '#/components/schemas/Company'
+      required:
+        - contactType
+      properties:
+        contactType:
+          type: string
+        id:
+          type: integer
+          format: int64
+        address:
+          $ref: '#/components/schemas/Address'
+        displayName:
+          type: string
+        taxId:
+          type: string    
+        bankAccountNumber:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+          example: [ "tag1", "tag2", "tag3" ]
+        version:
+          type: integer
+    Company:
+      allOf:
+        - $ref: '#/components/schemas/Contact'
+        - type: object
+          properties:
+            companyName:
+              type: string
+            taxId:
+              type: string
+    Person:
+      allOf:
+        - $ref: '#/components/schemas/Contact'
+        - type: object
+          properties:
+            firstName:
+              type: string
+            lastName:
+              type: string
+    Address:
+      type: object
+      properties:
+        country:
+          type: string
+        postcode:
+          type: string
+        city:
+          type: string
+        street:
+          type: string
+      required:
+        - country
+        - postcode
+        - city
+        - street
+    ContactRequest:
+      type: object
+      discriminator:
+        propertyName: contactType
+        mapping:
+          PERSON: '#/components/schemas/PersonRequest'
+          COMPANY: '#/components/schemas/CompanyRequest'
+      required:
+        - contactType
+      properties:
+        contactType:
+          type: string
+        address:
+          $ref: '#/components/schemas/Address'
+        displayName:
+          type: string
+        bankAccountNumber:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+          example: [ "tag1", "tag2", "tag3" ]
+    CompanyRequest:
+      allOf:
+        - $ref: '#/components/schemas/ContactRequest'
+        - type: object
+          required:
+            - companyName
+          properties:
+            companyName:
+              type: string
+            taxId:
+              type: string
+    PersonRequest:
+      allOf:
+        - $ref: '#/components/schemas/ContactRequest'
+        - type: object
+          required:
+            - firstName
+            - lastName
+          properties:
+            firstName:
+              type: string
+            lastName:
+              type: string
+    ContactsResponse:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Contact'
+          additionalProperties: true
+    ContactsPageResponse:
+      type: object
+      properties:
+        totalItems:
+          type: integer
+          format: int64
+          description: Total number of items that match the search criteria
+        totalPages:
+          type: integer
+          description: Total number of pages
+        currentPage:
+          type: integer
+          description: Current page number
+        itemsPerPage:
+          type: integer
+          description: Number of items per page
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Contact'
+      required:
+        - totalItems
+        - totalPages
+        - currentPage
+        - itemsPerPage
+        - items
