@@ -12,7 +12,7 @@
         <!-- lookup parent from repository -->
     </parent>
 
-    <groupId>com.veeteq.addressbook</groupId>
+    <groupId>com.veeteq</groupId>
     <artifactId>addressbook</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>Address Book Service</name>
