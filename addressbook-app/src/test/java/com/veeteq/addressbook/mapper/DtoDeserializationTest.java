@@ -16,7 +16,7 @@ public class DtoDeserializationTest {
 
         String json = """
     {
-      "contactType":"person",
+      "contactType":"PERSON",
       "firstName":"John",
       "lastName":"Smith"
     }
@@ -32,8 +32,8 @@ public class DtoDeserializationTest {
 
         String json = """
     {
-      "contactType":"company",
-      "companyName":"Veeteq"
+      "contactType":"COMPANY",
+      "companyName":"Plava Laguna Inc"
     }
     """;
 

@@ -47,6 +47,17 @@ public class ContactMapper {
         throw new IllegalArgumentException("Unsupported type");
     }
 
+    public ContactsResponseDto toDto(Page<Contact> result) {
+        var data = result.get().map(this::toDto).toList();
+        var dto = new ContactsResponseDto()
+                .currentPage(result.getNumber())
+                .pageSize(result.getSize())
+                .totalItems(result.getNumberOfElements())
+                .totalPages(result.getTotalPages())
+                .data(data);
+        return dto;
+    }
+
     public Contact<?> toEntity(ContactRequestDto dto) {
         var address = toEntity(dto.getAddress());
 
