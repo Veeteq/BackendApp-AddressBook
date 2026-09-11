@@ -1,7 +1,6 @@
 package com.veeteq.addressbook.service.jpa;
 
 import com.veeteq.addressbook.mapper.ContactMapper;
-import com.veeteq.addressbook.model.Address;
 import com.veeteq.addressbook.model.Company;
 import com.veeteq.addressbook.model.Contact;
 import com.veeteq.addressbook.model.Person;
@@ -11,8 +10,6 @@ import com.veeteq.addressbook.service.ContactService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 public class ContactServiceJpa implements ContactService {
@@ -27,11 +24,10 @@ public class ContactServiceJpa implements ContactService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ContactDto> getContacts() {
-        return contactRepository.findAll()
-                .stream()
-                .map(contactMapper::toDto)
-                .toList();
+    public ContactsResponseDto getContacts(Pageable pageable) {
+        var result = contactRepository.findAll(pageable);
+        var response = contactMapper.toDto(result);
+        return response;
     }
 
     @Override

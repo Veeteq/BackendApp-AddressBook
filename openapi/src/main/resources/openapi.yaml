@@ -85,31 +85,17 @@ paths:
       summary: Get all contacts (pageable)
       operationId: getContacts
       parameters:
-        - name: name
-          in: query
-          required: false
-          schema:
-            type: string
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-        - name: size
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/OrderBy'
+        - $ref: '#/components/parameters/OrderDirection'
       responses:
         '200':
           description: A paginated list of contacts
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ContactsPageResponse'
-
+                $ref: '#/components/schemas/ContactsResponse'
     post:
       tags:
         - contacts
@@ -133,33 +119,19 @@ paths:
     get:
       tags:
         - contacts
-      summary: Search contacts by name
+      summary: Search contacts by text
       operationId: searchContacts
       parameters:
-        - name: name
-          in: query
-          required: false
-          schema:
-            type: string
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 0
-        - name: size
-          in: query
-          required: false
-          schema:
-            type: integer
-            default: 20
+        - $ref: '#/components/parameters/SearchText'
       responses:
         '200':
           description: A paginated list of contacts
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ContactsPageResponse'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Contact'
 
 components:
   schemas:
@@ -182,8 +154,6 @@ components:
           $ref: '#/components/schemas/Address'
         displayName:
           type: string
-        taxId:
-          type: string    
         bankAccountNumber:
           type: string
         tags:
@@ -283,29 +253,86 @@ components:
               items:
                 $ref: '#/components/schemas/Contact'
           additionalProperties: true
-    ContactsPageResponse:
+    Pagination:
       type: object
       properties:
+        pageSize:
+          type: integer
+          description: Number of items on page.
+          example: 25
         totalItems:
           type: integer
-          format: int64
-          description: Total number of items that match the search criteria
+          description: The total number of items available.
+          example: 100
         totalPages:
           type: integer
-          description: Total number of pages
+          description: The total number of pages available.
+          example: 10
         currentPage:
           type: integer
-          description: Current page number
-        itemsPerPage:
-          type: integer
-          description: Number of items per page
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/Contact'
-      required:
-        - totalItems
-        - totalPages
-        - currentPage
-        - itemsPerPage
-        - items
+          description: The current page number.
+          example: 1
+  parameters:
+    Accept-Language:
+      name: Accept-Language
+      in: header
+      description: 'The language you prefer for messages. Supported values are: en-AU, en-CA, en-GB, en-US, pl-PL. Default is pl-PL.'
+      required: false
+      schema:
+        type: string
+        default: pl-PL
+        example: [en-US, pl-PL]
+    Transaction-Id:
+      name: Transaction-Id
+      in: header
+      description: Transaction-Id header parameter.
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PageNumber:
+      name: pageNumber
+      in: query
+      required: false
+      description: The page number to retrieve (0-based index).
+      schema:
+        type: integer
+        default: 0
+        example: 0
+    PageSize:
+      name: pageSize
+      in: query
+      required: false
+      description: The number of items to return per page.
+      schema:
+        type: integer
+        default: 25
+        example: 25
+    OrderBy:
+      name: orderBy
+      in: query
+      required: false
+      description: The field to order the items by.
+      schema:
+        type: string
+        default: id
+        example: itemName
+    OrderDirection:
+      name: orderDirection
+      in: query
+      required: false
+      description: The direction to order the items (asc or desc).
+      schema:
+        type: string
+        enum:
+          - asc
+          - desc
+        default: asc
+        example: asc
+    SearchText:
+      name: searchText
+      in: query
+      required: true
+      description: Text to search for the contacts
+      schema:
+        type: string
