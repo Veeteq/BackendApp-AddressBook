@@ -220,6 +220,8 @@ components:
           items:
             type: string
           example: [ "tag1", "tag2", "tag3" ]
+        version:
+          $ref: '#/components/schemas/Version'
     CompanyRequest:
       allOf:
         - $ref: '#/components/schemas/ContactRequest'
@@ -273,6 +275,11 @@ components:
           type: integer
           description: The current page number.
           example: 1
+    Version:
+      type: integer
+      description: Version number of the entity
+      title: Version
+      example: 1
   parameters:
     Accept-Language:
       name: Accept-Language

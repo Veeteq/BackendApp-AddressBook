@@ -23,8 +23,8 @@ public interface ContactMapper {
     Person toEntity(PersonRequestDto dto);
 
     @Mapping(target = "id",      ignore = true)
-    @Mapping(target = "version", ignore = true)
     @Mapping(target = "name",    source = "companyName")
+    @Mapping(target = "version", ignore = true)
     Company toEntity(CompanyRequestDto dto);
 
     @AfterMapping
@@ -38,11 +38,13 @@ public interface ContactMapper {
     AddressDto toDto(Address address);
     Address toEntity(AddressDto dto);
 
-    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "id",   ignore = true)
+    @Mapping(target = "tags", ignore = true)
     Person updateEntity(PersonRequestDto source,  @MappingTarget Person target);
 
     @Mapping(target = "id",   ignore = true)
     @Mapping(target = "name", source = "companyName")
+    @Mapping(target = "tags", ignore = true)
     Company updateEntity(CompanyRequestDto source, @MappingTarget Company target);
 
     @Mapping(target = "pageSize",    source = "size")

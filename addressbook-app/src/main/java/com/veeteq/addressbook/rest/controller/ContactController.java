@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ConcurrentModificationException;
 import java.util.List;
 
 @RestController
@@ -68,6 +69,8 @@ public class ContactController implements ContactsApi {
         try {
             var response = contactService.updateContactById(id, dto);
             return ResponseEntity.ok().body(response);
+        } catch (ConcurrentModificationException exc) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
         } catch (RuntimeException exc) {
             return ResponseEntity.notFound().build();
         }

@@ -5,6 +5,7 @@ import com.veeteq.addressbook.model.Company;
 import com.veeteq.addressbook.model.Contact;
 import com.veeteq.addressbook.model.Person;
 import com.veeteq.addressbook.repository.ContactRepository;
+import com.veeteq.addressbook.repository.UtilityRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -17,6 +18,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -48,6 +50,9 @@ class ContactControllerIT {
     @Autowired
     private ContactRepository repository;
 
+    @Autowired
+    private UtilityRepository utilityRepository;
+
     @Test
     void shouldCreatePerson() throws Exception {
         var payload = personJson();
@@ -58,6 +63,7 @@ class ContactControllerIT {
                 .andExpect(jsonPath("$.contactType").value("PERSON"))
                 .andExpect(jsonPath("$.firstName").value("John"))
                 .andExpect(jsonPath("$.lastName").value("Smith"))
+                .andExpect(jsonPath("$.version").value("0"))
                 .andExpect(jsonPath("$.tags.length()").value(2));
 
         List<Contact> contacts = repository.findAll();
@@ -79,8 +85,9 @@ class ContactControllerIT {
                         .content(payload))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.contactType").value("COMPANY"))
-                .andExpect(jsonPath("$.companyName").value("Veeteq"))
-                .andExpect(jsonPath("$.taxId").value("PL123456789"));
+                .andExpect(jsonPath("$.companyName").value("ACME Ltd."))
+                .andExpect(jsonPath("$.version").value("0"))
+                .andExpect(jsonPath("$.taxId").value("US123456789"));
 
         List<Contact> contacts = repository.findAll();
 
@@ -89,8 +96,8 @@ class ContactControllerIT {
 
         Company company = (Company) contacts.getFirst();
 
-        assertThat(company.getName()).isEqualTo("Veeteq");
-        assertThat(company.getTaxId()).isEqualTo("PL123456789");
+        assertThat(company.getName()).isEqualTo("ACME Ltd.");
+        assertThat(company.getTaxId()).isEqualTo("US123456789");
     }
 
     @Test
@@ -136,14 +143,12 @@ class ContactControllerIT {
                         .content(requestBody))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(100))
-                .andExpect(jsonPath("$.companyName")
-                        .value("New Company"))
-                .andExpect(jsonPath("$.taxId")
-                        .value("NEW-TAX"));
+                .andExpect(jsonPath("$.companyName").value("New Company Name"))
+                .andExpect(jsonPath("$.taxId").value("NEW-TAX"));
 
         // then
         Company persisted =(Company) repository.findById(100L).orElseThrow();
-        assertThat(persisted.getName()).isEqualTo("New Company");
+        assertThat(persisted.getName()).isEqualTo("New Company Name");
         assertThat(persisted.getTaxId()).isEqualTo("NEW-TAX");
     }
 
@@ -181,6 +186,59 @@ class ContactControllerIT {
         mockMvc.perform(delete("/api/addressbook/contacts/{id}", 99999L))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void shouldRejectUpdateWhenVersionIsStale() throws Exception {
+
+        // given
+        var company = new Company();
+        company.setId(utilityRepository.nextId());
+        company.setName("ACME");
+        company.setTaxId("123456");
+        repository.saveAndFlush(company);
+        var id = company.getId();
+        var staleVersion = company.getVersion();
+
+        // simulate concurrent update
+        company.setName("Updated by another user");
+        repository.saveAndFlush(company);
+
+        // stale DTO still contains old version
+        String requestBody = updateCompany_WithVersion().formatted(staleVersion);
+
+        // when + then
+        mockMvc.perform(put("/api/addressbook/contacts/{id}", id)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(requestBody)
+                )
+                .andDo(print())
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldUpdateContactWhenVersionMatches() throws Exception {
+
+        // given
+        var company = new Company();
+        company.setId(utilityRepository.nextId());
+        company.setName("ACME");
+        company.setTaxId("123456");
+        company = repository.saveAndFlush(company);
+
+        String requestBody = updateCompany_WithVersion().formatted(company.getVersion()); //My update for ACME
+
+        mockMvc.perform(put("/api/addressbook/contacts/{id}", company.getId())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(requestBody)
+                )
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.companyName").value("My update for ACME"));
+
+        var persisted = (Company) repository.findById(company.getId()).orElseThrow();
+        assertThat(persisted.getName()).isEqualTo("My update for ACME");
+    }
+
     private String personJson() {
         return """
                 {
@@ -192,7 +250,7 @@ class ContactControllerIT {
                   "tags": ["friend", "vip"],
                   "address": {
                     "city": "Wroclaw",
-                    "postCode": "50-001",
+                    "postcode": "50-001",
                     "street": "Market Square",
                     "country": "Poland"
                   }
@@ -204,16 +262,16 @@ class ContactControllerIT {
         return """
                 {
                   "contactType": "COMPANY",
-                  "companyName": "Veeteq",
-                  "taxId": "PL123456789",
-                  "displayName": "Veeteq Sp. z o.o.",
+                  "companyName": "ACME Ltd.",
+                  "taxId": "US123456789",
+                  "displayName": "ACME Limited",
                   "bankAccountNumber": "987654",
                   "tags": ["supplier", "partner"],
                   "address": {
-                    "city": "Wroclaw",
-                    "postCode": "50-001",
-                    "street": "Grabiszynska",
-                    "country": "Poland"
+                    "city": "Kansas City",
+                    "postcode": "50001",
+                    "street": "1001 Sun Valley",
+                    "country": "United States"
                   }
                 }
                 """;
@@ -223,15 +281,36 @@ class ContactControllerIT {
         return """
                 {
                   "contactType": "COMPANY",
-                  "companyName": "New Company",
+                  "companyName": "New Company Name",
                   "taxId": "NEW-TAX",
                   "address": {
                     "city": "Wroclaw",
-                    "postCode": "50-001",
+                    "postcode": "50-001",
                     "street": "Grabiszynska",
                     "country": "Poland"
-                  }
+                  },
+                  "version": 0
                 }
                 """;
+    }
+
+    private String updateCompany_WithVersion() {
+        return """
+        {
+          "contactType": "COMPANY",
+          "version": %d,
+          "companyName": "My update for ACME",
+          "taxId": "999999",
+          "displayName": "ACME",
+          "bankAccountNumber": "PL123",
+          "address": {
+            "country": "PL",
+            "postcode": "50-001",
+            "city": "Wroclaw",
+            "street": "Market Square"
+          },
+          "tags": ["A","B"]
+        }
+        """;
     }
 }

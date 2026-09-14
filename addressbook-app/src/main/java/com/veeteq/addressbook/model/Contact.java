@@ -90,6 +90,11 @@ public abstract class Contact extends BaseEntity {
         return this;
     }
 
+    public Contact setVersion(Integer version) {
+        this.version = version;
+        return this;
+    }
+
     public Integer getVersion() {
         return version;
     }
