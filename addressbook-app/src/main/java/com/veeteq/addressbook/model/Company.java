@@ -6,7 +6,7 @@ import jakarta.persistence.Entity;
 
 @Entity
 @DiscriminatorValue("company")
-public class Company extends Contact<Company> {
+public class Company extends Contact {
 
     @Column(name = "cont_name_tx")
     private String name;

@@ -6,7 +6,7 @@ import jakarta.persistence.Entity;
 
 @Entity
 @DiscriminatorValue("person")
-public class Person<T extends Person<T>> extends Contact<T> {
+public class Person extends Contact {
 
     @Column(name = "cont_firs_name_tx")
     private String firstName;
@@ -20,17 +20,17 @@ public class Person<T extends Person<T>> extends Contact<T> {
         return firstName;
     }
 
-    public T setFirstName(String firstName) {
+    public Person setFirstName(String firstName) {
         this.firstName = firstName;
-        return (T) this;
+        return this;
     }
 
     public String getLastName() {
         return lastName;
     }
 
-    public T setLastName(String lastName) {
+    public Person setLastName(String lastName) {
         this.lastName = lastName;
-        return (T) this;
+        return this;
     }
 }
