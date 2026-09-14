@@ -18,6 +18,4 @@ public interface ContactRepository extends JpaRepository<Contact, Long> {
                 OR LOWER(CONCAT(c.firstName, c.lastName)) LIKE %:name%""")
     Page<Contact> findByNameContainingIgnoreCase(@Param("name") String name, PageRequest pageRequest);
 
-    @Query(value = "select next value for contacts_seq", nativeQuery = true)
-    Long getId();
 }

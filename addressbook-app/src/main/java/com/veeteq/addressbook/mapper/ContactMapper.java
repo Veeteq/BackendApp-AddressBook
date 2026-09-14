@@ -1,148 +1,88 @@
 package com.veeteq.addressbook.mapper;
 
-import com.veeteq.addressbook.model.*;
-import com.veeteq.addressbook.repository.ContactRepository;
+import com.veeteq.addressbook.model.Address;
+import com.veeteq.addressbook.model.Company;
+import com.veeteq.addressbook.model.Contact;
+import com.veeteq.addressbook.model.Person;
 import com.veeteq.addressbook.rest.dto.*;
+import org.mapstruct.*;
 import org.springframework.data.domain.Page;
-import org.springframework.stereotype.Component;
 
-@Component
-public class ContactMapper {
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
+public interface ContactMapper {
 
-    private final ContactRepository contactRepository;
+    @Mapping(target = "displayName", expression = "java(entity.getDisplayName() != null ? entity.getDisplayName() : entity.getFirstName() + \" \" + entity.getLastName())")
+    PersonDto toDto(Person entity);
 
-    public ContactMapper(ContactRepository contactRepository) {
-        this.contactRepository = contactRepository;
-    }
+    @Mapping(source = "name", target = "companyName")
+    @Mapping(target = "displayName", expression = "java(entity.getDisplayName() != null ? entity.getDisplayName() : entity.getName())")
+    CompanyDto toDto(Company entity);
 
-    public ContactDto toDto(Contact contact) {
-        var address = toDto(contact.getAddress());
+    @Mapping(target = "id",      ignore = true)
+    @Mapping(target = "version", ignore = true)
+    Person toEntity(PersonRequestDto dto);
 
-        if (contact instanceof Person<?> person) {
-            var dto = new PersonDto();
-            dto.setId(person.getId());
-            dto.setDisplayName(person.getDisplayName() != null ? person.getDisplayName() : person.getFirstName().concat(" ").concat(person.getLastName()));
-            dto.setFirstName(person.getFirstName());
-            dto.setLastName(person.getLastName());
-            dto.setAddress(address);
-            dto.setBankAccountNumber(person.getBankAccountNumber());
-            dto.setVersion(person.getVersion());
-            person.getTags().forEach(dto::addTagsItem);
-            return dto;
+    @Mapping(target = "id",      ignore = true)
+    @Mapping(target = "version", ignore = true)
+    @Mapping(target = "name",    source = "companyName")
+    Company toEntity(CompanyRequestDto dto);
+
+    @AfterMapping
+    default void updateTags(ContactRequestDto source, @MappingTarget Contact target) {
+        target.getTags().clear();
+        if (source.getTags() != null) {
+            target.getTags().addAll(source.getTags());
         }
-
-        if (contact instanceof Company company) {
-            var dto = new CompanyDto();
-            dto.setId(company.getId());
-            dto.setCompanyName(company.getName());
-            dto.setDisplayName(company.getDisplayName() != null ? contact.getDisplayName() : company.getName());
-            dto.setAddress(address);
-            dto.setBankAccountNumber(company.getBankAccountNumber());
-            dto.setTaxId(company.getTaxId());
-            company.getTags().forEach(dto::addTagsItem);
-            dto.setVersion(company.getVersion());
-            return dto;
-        }
-
-        throw new IllegalArgumentException("Unsupported type");
     }
 
-    public ContactsResponseDto toDto(Page<Contact> result) {
-        var data = result.get().map(this::toDto).toList();
-        var dto = new ContactsResponseDto()
-                .currentPage(result.getNumber())
-                .pageSize(result.getSize())
-                .totalItems(result.getTotalElements())
-                .totalPages(result.getTotalPages())
-                .data(data);
-        return dto;
+    AddressDto toDto(Address address);
+    Address toEntity(AddressDto dto);
+
+    @Mapping(target = "id", ignore = true)
+    Person updateEntity(PersonRequestDto source,  @MappingTarget Person target);
+
+    @Mapping(target = "id",   ignore = true)
+    @Mapping(target = "name", source = "companyName")
+    Company updateEntity(CompanyRequestDto source, @MappingTarget Company target);
+
+    @Mapping(target = "pageSize",    source = "size")
+    @Mapping(target = "totalItems",  source = "totalElements")
+    @Mapping(target = "totalPages",  source = "totalPages")
+    @Mapping(target = "currentPage", source = "number")
+    @Mapping(target = "data",        ignore = true)
+    ContactsResponseDto toDto(Page<Contact> result);
+
+    @AfterMapping
+    default void fillData(Page<Contact> source, @MappingTarget ContactsResponseDto target) {
+        var data = source.stream()
+                .map(this::toDto)
+                .toList();
+        target.setData(data);
     }
 
-    public Contact<?> toEntity(ContactRequestDto dto) {
-        var address = toEntity(dto.getAddress());
-
-        if (dto instanceof PersonRequestDto personDto) {
-            var entity = new Person<>()
-                    .setId(contactRepository.getId())
-                    .setFirstName(personDto.getFirstName())
-                    .setLastName(personDto.getLastName())
-                    .setDisplayName(personDto.getDisplayName())
-                    .setAddress(address)
-                    .setBankAccountNumber(personDto.getBankAccountNumber());
-            personDto.getTags().forEach(entity::addToTags);
-            return entity;
-        }
-
-        if (dto instanceof CompanyRequestDto companyDto) {
-            var entity = new Company()
-                    .setId(contactRepository.getId())
-                    .setName(companyDto.getCompanyName())
-                    .setDisplayName(companyDto.getDisplayName())
-                    .setAddress(address)
-                    .setBankAccountNumber(companyDto.getBankAccountNumber())
-                    .setTaxId(companyDto.getTaxId());
-            companyDto.getTags().forEach(entity::addToTags);
-            return entity;
-        }
-
-        throw new IllegalArgumentException("Unsupported type");
-    }
-
-    private AddressDto toDto(Address entity) {
-        if (entity == null) return null;
-        var dto = new AddressDto()
-                .city(entity.getCity())
-                .postcode(entity.getPostcode())
-                .street(entity.getStreet())
-                .country(entity.getCountry());
-        return dto;
-    }
-
-    private Address toEntity(AddressDto dto) {
-        var entity = new Address()
-                .setCity(dto.getCity())
-                .setPostcode(dto.getPostcode())
-                .setStreet(dto.getStreet())
-                .setCountry(dto.getCountry());
-        return entity;
-    }
-
-    public Contact updateEntity(Contact<?> entity, ContactRequestDto dto) {
+    default ContactDto toDto(Contact entity) {
         return switch (entity) {
-            case Person<?> person
-                    when dto instanceof PersonRequestDto personDto -> updatePerson(person, personDto);
-            case Company company
-                    when dto instanceof CompanyRequestDto companyDto -> updateCompany(company, companyDto);
+            case Person person -> toDto(person);
+            case Company company -> toDto(company);
             default -> throw new IllegalArgumentException();
         };
     }
 
-    private Contact updatePerson(Person person, PersonRequestDto dto) {
-        updateCommon(person, dto);
-        person.setFirstName(dto.getFirstName());
-        person.setLastName(dto.getLastName());
-        return person;
+    default Contact toEntity(ContactRequestDto dto) {
+        return switch (dto) {
+            case PersonRequestDto person -> toEntity(person);
+            case CompanyRequestDto company -> toEntity(company);
+            default -> throw new IllegalArgumentException();
+        };
     }
 
-    private Contact updateCompany(Company company, CompanyRequestDto dto) {
-        updateCommon(company, dto);
-        company.setName(dto.getCompanyName());
-        company.setTaxId(dto.getTaxId());
-        return company;
+    default Contact updateEntity(Contact entity, ContactRequestDto dto) {
+        return switch (entity) {
+            case Person person
+                    when dto instanceof PersonRequestDto personDto -> updateEntity(personDto, person);
+            case Company company
+                    when dto instanceof CompanyRequestDto companyDto -> updateEntity(companyDto, company);
+            default -> throw new IllegalArgumentException();
+        };
     }
-
-    private void updateCommon(Contact<?> contact, ContactRequestDto dto) {
-        contact.setDisplayName(dto.getDisplayName());
-        contact.setBankAccountNumber(dto.getBankAccountNumber());
-
-        contact.setAddress(new Address()
-                .setCity(dto.getAddress().getCity())
-                .setPostcode(dto.getAddress().getPostcode())
-                .setStreet(dto.getAddress().getStreet())
-                .setCountry(dto.getAddress().getCountry())
-        );
-        contact.getTags().clear();
-        contact.getTags().addAll(dto.getTags());
-    }
-
 }

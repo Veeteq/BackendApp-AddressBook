@@ -4,7 +4,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 
 @MappedSuperclass
-public abstract class BaseEntity<T extends BaseEntity<T>> {
+public abstract class BaseEntity {
 
     @Id
     private Long id;
@@ -15,8 +15,8 @@ public abstract class BaseEntity<T extends BaseEntity<T>> {
         return id;
     }
 
-    public T setId(Long id) {
+    public BaseEntity setId(Long id) {
         this.id = id;
-        return (T) this;
+        return this;
     }
 }

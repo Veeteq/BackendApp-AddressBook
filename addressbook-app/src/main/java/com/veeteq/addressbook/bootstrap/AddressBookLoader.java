@@ -35,54 +35,54 @@ public class AddressBookLoader implements ApplicationRunner {
     }
 
     private Contact loadPerson() {
-        var person = new Person<>()
-                .setId(getRandomLong())
-                .setFirstName(getRandomString())
-                .setLastName(getRandomString())
-                .setDisplayName(getRandomString())
-                .setBankAccountNumber(getRandomString())
-                .setAddress(new Address()
+        var person = new Person();
+        person.setId(getRandomLong());
+        person.setFirstName(getRandomString());
+        person.setLastName(getRandomString());
+        person.setDisplayName(getRandomString());
+        person.setBankAccountNumber(getRandomString());
+        person.setAddress(new Address()
                         .setCity(getRandomString())
                         .setPostcode(getRandomString().substring(0, 10))
                         .setStreet(getRandomString())
-                        .setCountry(getRandomString()))
-                .setTags(Set.of("tag1", "tag2"));
+                        .setCountry(getRandomString()));
+        person.setTags(Set.of("tag1", "tag2"));
 
         var saved = contactRepository.save(person);
         return saved;
     }
 
     private Company loadCompany() {
-        var company = new Company()
-                .setId(getRandomLong())
-                .setName(getRandomString())
-                .setDisplayName(getRandomString())
-                .setBankAccountNumber(getRandomString())
-                .setTaxId(getRandomString())
-                .setAddress(new Address()
+        var company = new Company();
+        company.setId(getRandomLong());
+        company.setName(getRandomString());
+        company.setDisplayName(getRandomString());
+        company.setBankAccountNumber(getRandomString());
+        company.setTaxId(getRandomString());
+        company.setAddress(new Address()
                         .setCity(getRandomString())
                         .setPostcode(getRandomString().substring(0, 10))
                         .setStreet(getRandomString())
-                        .setCountry(getRandomString()))
-                .setTags(Set.of("tag3", "tag4"));
+                        .setCountry(getRandomString()));
+        company.setTags(Set.of("tag3", "tag4"));
         var saved = contactRepository.save(company);
         return saved;
     }
 
     private Employee loadEmployee() {
-        var employee = new Employee()
-                .setId(getRandomLong())
-                .setFirstName(getRandomString())
-                .setLastName(getRandomString())
-                .setBankAccountNumber(getRandomString())
-                .setJob(getRandomString())
-                .setSalary(getRandomDouble())
-                .setAddress(new Address()
+        var employee = new Employee();
+        employee.setId(getRandomLong());
+        employee.setFirstName(getRandomString());
+        employee.setLastName(getRandomString());
+        employee.setBankAccountNumber(getRandomString());
+        employee.setJob(getRandomString());
+        employee.setSalary(getRandomDouble());
+        employee.setAddress(new Address()
                         .setCity(getRandomString())
                         .setPostcode(getRandomString().substring(0, 10))
                         .setStreet(getRandomString())
-                        .setCountry(getRandomString()))
-                .setTags(Set.of("tag2", "tag4"));
+                        .setCountry(getRandomString()));
+        employee.setTags(Set.of("tag2", "tag4"));
         var saved = contactRepository.save(employee);
         return saved;
     }

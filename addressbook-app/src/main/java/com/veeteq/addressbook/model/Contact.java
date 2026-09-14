@@ -13,7 +13,7 @@ import java.util.TreeSet;
 @AttributeOverride(name = "id", column = @Column(name = "cont_id"))
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "type_tx", discriminatorType = DiscriminatorType.STRING)
-public abstract class Contact<T extends Contact<T>> extends BaseEntity<T> {
+public abstract class Contact extends BaseEntity {
 
     @Column(name = "cont_disp_name_tx")
     private String displayName;
@@ -53,41 +53,41 @@ public abstract class Contact<T extends Contact<T>> extends BaseEntity<T> {
         return displayName;
     }
 
-    public T setDisplayName(String displayName) {
+    public Contact setDisplayName(String displayName) {
         this.displayName = displayName;
-        return (T) this;
+        return this;
     }
 
     public Address getAddress() {
         return address;
     }
 
-    public T setAddress(Address address) {
+    public Contact setAddress(Address address) {
         this.address = address;
-        return (T) this;
+        return this;
     }
 
     public String getBankAccountNumber() {
         return bankAccountNumber;
     }
 
-    public T setBankAccountNumber(String bankAccountNumber) {
+    public Contact setBankAccountNumber(String bankAccountNumber) {
         this.bankAccountNumber = bankAccountNumber;
-        return (T) this;
+        return this;
     }
 
     public Set<String> getTags() {
         return tags;
     }
 
-    public T setTags(Set<String> tags) {
+    public Contact setTags(Set<String> tags) {
         this.tags = tags;
-        return (T) this;
+        return this;
     }
 
-    public T addToTags(String tag) {
+    public Contact addToTags(String tag) {
         this.tags.add(tag);
-        return (T) this;
+        return this;
     }
 
     public Integer getVersion() {

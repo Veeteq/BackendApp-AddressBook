@@ -8,7 +8,7 @@ import jakarta.persistence.Entity;
 
 @Entity
 @DiscriminatorValue("employee")
-public class Employee extends Person<Employee> {
+public class Employee extends Person {
 	@Column(name="cont_job_tx")
     private String job;
 

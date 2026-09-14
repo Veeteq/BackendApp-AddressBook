@@ -55,7 +55,7 @@ class ContactControllerIT {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.contactType").value("person"))
+                .andExpect(jsonPath("$.contactType").value("PERSON"))
                 .andExpect(jsonPath("$.firstName").value("John"))
                 .andExpect(jsonPath("$.lastName").value("Smith"))
                 .andExpect(jsonPath("$.tags.length()").value(2));
@@ -65,7 +65,7 @@ class ContactControllerIT {
         assertThat(contacts).hasSize(4);
         assertThat(contacts.getFirst()).isInstanceOf(Person.class);
 
-        Person<?> person = (Person<?>) contacts.getFirst();
+        Person person = (Person) contacts.getFirst();
 
         assertThat(person.getFirstName()).isEqualTo("John");
         assertThat(person.getLastName()).isEqualTo("Smith");
@@ -78,7 +78,7 @@ class ContactControllerIT {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.contactType").value("company"))
+                .andExpect(jsonPath("$.contactType").value("COMPANY"))
                 .andExpect(jsonPath("$.companyName").value("Veeteq"))
                 .andExpect(jsonPath("$.taxId").value("PL123456789"));
 
@@ -99,30 +99,33 @@ class ContactControllerIT {
                 .setCountry("United States")
                 .setStreet("105 Main Street")
                 .setPostcode("19092");
-        repository.save(new Person<>()
-                .setId(1L)
-                .setFirstName("John")
-                .setLastName("Smith")
-                .setAddress(address));
 
-        repository.save(new Company()
-                .setId(2L)
-                .setName("Veeteq")
-                .setAddress(address));
+        var person = new Person();
+        person.setId(1L);
+        person.setFirstName("John");
+        person.setLastName("Smith");
+        person.setAddress(address);
+        repository.save(person);
+
+        var company = new Company();
+        company.setId(2L);
+        company.setName("Plava Laguna Inc");
+        company.setAddress(address);
+        repository.save(company);
 
         mockMvc.perform(get("/api/addressbook/contacts"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].contactType").exists())
-                .andExpect(jsonPath("$[1].contactType").exists());
+                .andExpect(jsonPath("$.data[0].contactType").exists())
+                .andExpect(jsonPath("$.data[1].contactType").exists());
     }
 
     @Test
     void shouldUpdateCompany() throws Exception {
         // given
-        Company company = new Company()
-                .setId(100L)
-                .setName("Old Company")
-                .setTaxId("OLD-TAX");
+        var company = new Company();
+        company.setId(100L);
+        company.setName("Old Company");
+        company.setTaxId("OLD-TAX");
         repository.save(company);
 
         String requestBody = updateCompanyJson();
@@ -157,9 +160,9 @@ class ContactControllerIT {
     @Test
     void shouldDeleteContact() throws Exception {
         // given
-        Company company = new Company()
-                .setId(200L)
-                .setName("Company");
+        var company = new Company();
+        company.setId(200L);
+        company.setName("Company");
         repository.save(company);
 
         // sanity check
@@ -181,7 +184,7 @@ class ContactControllerIT {
     private String personJson() {
         return """
                 {
-                  "contactType": "person",
+                  "contactType": "PERSON",
                   "firstName": "John",
                   "lastName": "Smith",
                   "displayName": "John Smith",
@@ -200,7 +203,7 @@ class ContactControllerIT {
     private String companyJson() {
         return """
                 {
-                  "contactType": "company",
+                  "contactType": "COMPANY",
                   "companyName": "Veeteq",
                   "taxId": "PL123456789",
                   "displayName": "Veeteq Sp. z o.o.",
@@ -219,7 +222,7 @@ class ContactControllerIT {
     private String updateCompanyJson() {
         return """
                 {
-                  "contactType": "company",
+                  "contactType": "COMPANY",
                   "companyName": "New Company",
                   "taxId": "NEW-TAX",
                   "address": {
