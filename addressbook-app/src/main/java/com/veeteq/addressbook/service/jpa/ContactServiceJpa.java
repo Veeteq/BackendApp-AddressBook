@@ -12,6 +12,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ConcurrentModificationException;
+import java.util.Objects;
+
 @Service
 public class ContactServiceJpa implements ContactService {
 
@@ -69,6 +72,8 @@ public class ContactServiceJpa implements ContactService {
     }
 
     private void validateType(Contact contact, ContactRequestDto dto) {
+        if (!Objects.equals(contact.getVersion(), dto.getVersion())) throw new ConcurrentModificationException("Contact has been already modified");
+
         if (contact instanceof Person person && dto instanceof PersonRequestDto personDto) return;
         if (contact instanceof Company company && dto instanceof CompanyRequestDto companyDto) return;
         throw new IllegalArgumentException("Changing contact type is not supported");
