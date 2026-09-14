@@ -11,9 +11,12 @@ import com.veeteq.addressbook.service.ContactService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.ConcurrentModificationException;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 public class ContactServiceJpa implements ContactService {
@@ -71,6 +74,17 @@ public class ContactServiceJpa implements ContactService {
         contactRepository.deleteById(id);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<ContactDto> searchContacts(String searchText) {
+        if (!StringUtils.hasText(searchText)) return List.of();
+        var result = contactRepository.findByNameContainingIgnoreCase(searchText);
+        var response = result.stream()
+                .map(contactMapper::toDto)
+                .collect(Collectors.toList());
+        return response;
+    }
+
     private void validateType(Contact contact, ContactRequestDto dto) {
         if (!Objects.equals(contact.getVersion(), dto.getVersion())) throw new ConcurrentModificationException("Contact has been already modified");
 
@@ -78,4 +92,5 @@ public class ContactServiceJpa implements ContactService {
         if (contact instanceof Company company && dto instanceof CompanyRequestDto companyDto) return;
         throw new IllegalArgumentException("Changing contact type is not supported");
     }
+
 }

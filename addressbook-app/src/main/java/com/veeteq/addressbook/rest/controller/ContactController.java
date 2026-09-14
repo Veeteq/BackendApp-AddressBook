@@ -60,7 +60,8 @@ public class ContactController implements ContactsApi {
 
     @Override
     public ResponseEntity<List<ContactDto>> searchContacts(String searchText) {
-        return null;
+        var response = contactService.searchContacts(searchText);
+        return ResponseEntity.ok(response);
     }
 
     @Override
