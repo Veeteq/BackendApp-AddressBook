@@ -1,0 +1,116 @@
+pipeline {
+    agent any
+
+    environment {
+      SPRING_PROFILES_ACTIVE = "dev"
+      DB_CREDENTIALS = credentials('budget-db')
+      VM_HOST = '192.168.56.104'
+      JAR_PATH = 'addressbook-app/target/addressbook-app.jar'
+      REPOSITORY_URL = 'ssh://root@192.168.56.104/root/git/bck-address-book.git'
+      IMAGE_NAME = 'addressbook-app'
+      IMAGE_TAG = 'latest'
+      CONTAINER_NAME = 'addressbook-app'
+      HOST_PORT = '8083'
+      CONTAINER_PORT = '8080'
+    }
+
+    parameters {
+        string(name: 'BRANCH', defaultValue: 'develop', description: 'Branch name to build')
+    }
+
+    stages {
+        stage('Debug') {
+            steps {
+                echo "Building branch: ${params.BRANCH}"
+                echo "DB_HOST=$DB_HOST"
+                echo "DB_PORT=$DB_PORT"
+                echo "DB_NAME=$DB_NAME"
+                echo "DB_USER=$DB_CREDENTIALS_USR"
+                echo "NETWORK_NAME=$NETWORK_NAME"
+            }
+        }
+
+        stage('Checkout') {
+            steps {
+                git url: env.REPOSITORY_URL, branch: params.BRANCH
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'chmod +x mvnw'
+                sh './mvnw -B -DskipTests clean package'
+            }
+        }
+
+        stage('Verify Artifact') {
+            steps {
+                sh '''
+                    echo "Checking built artifact..."
+                    test -f ${JAR_PATH}
+                    ls -lh ${JAR_PATH}
+                '''
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                sh '''
+                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh '''
+                    docker network inspect ${NETWORK_NAME} > /dev/null 2>&1 || \
+                    docker network create ${NETWORK_NAME}
+                '''
+                sh 'docker rm -f ${CONTAINER_NAME} || true'
+                sh '''
+                    docker run -d \
+                    -p ${HOST_PORT}:${CONTAINER_PORT} \
+                    --network ${NETWORK_NAME} \
+                    -e SERVER_PORT=${CONTAINER_PORT} \
+                    -e SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} \
+                    -e DB_HOST=${DB_HOST} \
+                    -e DB_PORT=${DB_PORT} \
+                    -e DB_NAME=${DB_NAME} \
+                    -e DB_USER=${DB_CREDENTIALS_USR} \
+                    -e DB_PASSWORD=${DB_CREDENTIALS_PSW} \
+                    --name ${CONTAINER_NAME} ${IMAGE_NAME}:${IMAGE_TAG}
+                '''
+                sh 'docker logs --tail 30 ${CONTAINER_NAME}'
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                sh '''
+                    sleep 10
+                    for i in $(seq 1 30); do
+                        echo "Attempt $i"
+                        docker exec ${CONTAINER_NAME} curl -s http://localhost:${CONTAINER_PORT}/actuator/health | grep '"status":"UP"' && break
+                        sleep 1
+                    done
+                    echo "Health check passed"
+                '''
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                sh '''
+                    docker image prune -f
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}

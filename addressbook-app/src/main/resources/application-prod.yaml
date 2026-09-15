@@ -2,8 +2,8 @@ spring:
   datasource:
     username: ${DB_USER}
     password: ${DB_PASSWORD}
-    driver-class-name: oracle.jdbc.OracleDriver
-    url: jdbc:oracle:thin:@//192.168.10.10:1521/alderaan
+    driver-class-name: oracle.jdbc.OracleDriver    
+    url: jdbc:oracle:thin:@//${DB_HOST:192.168.10.10}:${DB_PORT:1521}/${DB_NAME:alderaan}
     hikari:
       minimumIdle: 5
       maximum-pool-size: 5
