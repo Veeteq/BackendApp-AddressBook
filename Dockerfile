@@ -1,0 +1,10 @@
+# ============================================================
+# Runtime stage
+# ============================================================
+FROM eclipse-temurin:21-jre
+
+WORKDIR /app
+
+COPY addressbook-app/target/addressbook-app.jar app.jar
+
+ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -1,0 +1,42 @@
+# ============================================================
+# Build stage
+# ============================================================
+FROM maven:3.9.9-eclipse-temurin-21 AS build
+
+WORKDIR /app
+
+# ------------------------------------------------------------
+# 1. Copy Maven project descriptors
+# ------------------------------------------------------------
+COPY pom.xml .
+COPY openapi/pom.xml openapi/pom.xml
+COPY addressbook-app/pom.xml addressbook-app/pom.xml
+
+# ------------------------------------------------------------
+# 2. Download Maven dependencies
+# ------------------------------------------------------------
+RUN mvn dependency:go-offline -DskipTests
+
+# ------------------------------------------------------------
+# 3. Copy source code
+# ------------------------------------------------------------
+COPY openapi openapi
+COPY addressbook-app addressbook-app
+
+# ------------------------------------------------------------
+# 4. Build application
+# ------------------------------------------------------------
+RUN mvn -pl addressbook-app -am package -DskipTests
+
+# ============================================================
+# Runtime stage
+# ============================================================
+FROM eclipse-temurin:21-jre
+
+WORKDIR /app
+
+COPY --from=build /app/addressbook-app/target/addressbook-app.jar app.jar
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "app.jar"]

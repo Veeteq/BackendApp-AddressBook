@@ -34,4 +34,5 @@ create unique index cont_idx on contacts (cont_id);
 alter table contacts
     add constraint cont_pk primary key (cont_id);
 
+drop sequence if exists contacts_seq;
 create sequence contacts_seq start with 1 increment by 1 cache 1;

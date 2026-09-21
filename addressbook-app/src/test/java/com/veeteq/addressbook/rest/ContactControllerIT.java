@@ -5,6 +5,7 @@ import com.veeteq.addressbook.model.Company;
 import com.veeteq.addressbook.model.Contact;
 import com.veeteq.addressbook.model.Person;
 import com.veeteq.addressbook.repository.ContactRepository;
+import com.veeteq.addressbook.repository.UtilityRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -17,6 +18,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -48,6 +50,9 @@ class ContactControllerIT {
     @Autowired
     private ContactRepository repository;
 
+    @Autowired
+    private UtilityRepository utilityRepository;
+
     @Test
     void shouldCreatePerson() throws Exception {
         var payload = personJson();
@@ -55,9 +60,10 @@ class ContactControllerIT {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.contactType").value("person"))
+                .andExpect(jsonPath("$.contactType").value("PERSON"))
                 .andExpect(jsonPath("$.firstName").value("John"))
                 .andExpect(jsonPath("$.lastName").value("Smith"))
+                .andExpect(jsonPath("$.version").value("0"))
                 .andExpect(jsonPath("$.tags.length()").value(2));
 
         List<Contact> contacts = repository.findAll();
@@ -65,7 +71,7 @@ class ContactControllerIT {
         assertThat(contacts).hasSize(4);
         assertThat(contacts.getFirst()).isInstanceOf(Person.class);
 
-        Person<?> person = (Person<?>) contacts.getFirst();
+        Person person = (Person) contacts.getFirst();
 
         assertThat(person.getFirstName()).isEqualTo("John");
         assertThat(person.getLastName()).isEqualTo("Smith");
@@ -78,9 +84,10 @@ class ContactControllerIT {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.contactType").value("company"))
-                .andExpect(jsonPath("$.companyName").value("Veeteq"))
-                .andExpect(jsonPath("$.taxId").value("PL123456789"));
+                .andExpect(jsonPath("$.contactType").value("COMPANY"))
+                .andExpect(jsonPath("$.companyName").value("ACME Ltd."))
+                .andExpect(jsonPath("$.version").value("0"))
+                .andExpect(jsonPath("$.taxId").value("US123456789"));
 
         List<Contact> contacts = repository.findAll();
 
@@ -89,8 +96,8 @@ class ContactControllerIT {
 
         Company company = (Company) contacts.getFirst();
 
-        assertThat(company.getName()).isEqualTo("Veeteq");
-        assertThat(company.getTaxId()).isEqualTo("PL123456789");
+        assertThat(company.getName()).isEqualTo("ACME Ltd.");
+        assertThat(company.getTaxId()).isEqualTo("US123456789");
     }
 
     @Test
@@ -99,30 +106,33 @@ class ContactControllerIT {
                 .setCountry("United States")
                 .setStreet("105 Main Street")
                 .setPostcode("19092");
-        repository.save(new Person<>()
-                .setId(1L)
-                .setFirstName("John")
-                .setLastName("Smith")
-                .setAddress(address));
 
-        repository.save(new Company()
-                .setId(2L)
-                .setName("Veeteq")
-                .setAddress(address));
+        var person = new Person();
+        person.setId(1L);
+        person.setFirstName("John");
+        person.setLastName("Smith");
+        person.setAddress(address);
+        repository.save(person);
+
+        var company = new Company();
+        company.setId(2L);
+        company.setName("Plava Laguna Inc");
+        company.setAddress(address);
+        repository.save(company);
 
         mockMvc.perform(get("/api/addressbook/contacts"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].contactType").exists())
-                .andExpect(jsonPath("$[1].contactType").exists());
+                .andExpect(jsonPath("$.data[0].contactType").exists())
+                .andExpect(jsonPath("$.data[1].contactType").exists());
     }
 
     @Test
     void shouldUpdateCompany() throws Exception {
         // given
-        Company company = new Company()
-                .setId(100L)
-                .setName("Old Company")
-                .setTaxId("OLD-TAX");
+        var company = new Company();
+        company.setId(100L);
+        company.setName("Old Company");
+        company.setTaxId("OLD-TAX");
         repository.save(company);
 
         String requestBody = updateCompanyJson();
@@ -133,14 +143,12 @@ class ContactControllerIT {
                         .content(requestBody))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(100))
-                .andExpect(jsonPath("$.companyName")
-                        .value("New Company"))
-                .andExpect(jsonPath("$.taxId")
-                        .value("NEW-TAX"));
+                .andExpect(jsonPath("$.companyName").value("New Company Name"))
+                .andExpect(jsonPath("$.taxId").value("NEW-TAX"));
 
         // then
         Company persisted =(Company) repository.findById(100L).orElseThrow();
-        assertThat(persisted.getName()).isEqualTo("New Company");
+        assertThat(persisted.getName()).isEqualTo("New Company Name");
         assertThat(persisted.getTaxId()).isEqualTo("NEW-TAX");
     }
 
@@ -157,9 +165,9 @@ class ContactControllerIT {
     @Test
     void shouldDeleteContact() throws Exception {
         // given
-        Company company = new Company()
-                .setId(200L)
-                .setName("Company");
+        var company = new Company();
+        company.setId(200L);
+        company.setName("Company");
         repository.save(company);
 
         // sanity check
@@ -178,10 +186,63 @@ class ContactControllerIT {
         mockMvc.perform(delete("/api/addressbook/contacts/{id}", 99999L))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void shouldRejectUpdateWhenVersionIsStale() throws Exception {
+
+        // given
+        var company = new Company();
+        company.setId(utilityRepository.nextId());
+        company.setName("ACME");
+        company.setTaxId("123456");
+        repository.saveAndFlush(company);
+        var id = company.getId();
+        var staleVersion = company.getVersion();
+
+        // simulate concurrent update
+        company.setName("Updated by another user");
+        repository.saveAndFlush(company);
+
+        // stale DTO still contains old version
+        String requestBody = updateCompany_WithVersion().formatted(staleVersion);
+
+        // when + then
+        mockMvc.perform(put("/api/addressbook/contacts/{id}", id)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(requestBody)
+                )
+                .andDo(print())
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldUpdateContactWhenVersionMatches() throws Exception {
+
+        // given
+        var company = new Company();
+        company.setId(utilityRepository.nextId());
+        company.setName("ACME");
+        company.setTaxId("123456");
+        company = repository.saveAndFlush(company);
+
+        String requestBody = updateCompany_WithVersion().formatted(company.getVersion()); //My update for ACME
+
+        mockMvc.perform(put("/api/addressbook/contacts/{id}", company.getId())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(requestBody)
+                )
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.companyName").value("My update for ACME"));
+
+        var persisted = (Company) repository.findById(company.getId()).orElseThrow();
+        assertThat(persisted.getName()).isEqualTo("My update for ACME");
+    }
+
     private String personJson() {
         return """
                 {
-                  "contactType": "person",
+                  "contactType": "PERSON",
                   "firstName": "John",
                   "lastName": "Smith",
                   "displayName": "John Smith",
@@ -189,7 +250,7 @@ class ContactControllerIT {
                   "tags": ["friend", "vip"],
                   "address": {
                     "city": "Wroclaw",
-                    "postCode": "50-001",
+                    "postcode": "50-001",
                     "street": "Market Square",
                     "country": "Poland"
                   }
@@ -200,17 +261,17 @@ class ContactControllerIT {
     private String companyJson() {
         return """
                 {
-                  "contactType": "company",
-                  "companyName": "Veeteq",
-                  "taxId": "PL123456789",
-                  "displayName": "Veeteq Sp. z o.o.",
+                  "contactType": "COMPANY",
+                  "companyName": "ACME Ltd.",
+                  "taxId": "US123456789",
+                  "displayName": "ACME Limited",
                   "bankAccountNumber": "987654",
                   "tags": ["supplier", "partner"],
                   "address": {
-                    "city": "Wroclaw",
-                    "postCode": "50-001",
-                    "street": "Grabiszynska",
-                    "country": "Poland"
+                    "city": "Kansas City",
+                    "postcode": "50001",
+                    "street": "1001 Sun Valley",
+                    "country": "United States"
                   }
                 }
                 """;
@@ -219,16 +280,37 @@ class ContactControllerIT {
     private String updateCompanyJson() {
         return """
                 {
-                  "contactType": "company",
-                  "companyName": "New Company",
+                  "contactType": "COMPANY",
+                  "companyName": "New Company Name",
                   "taxId": "NEW-TAX",
                   "address": {
                     "city": "Wroclaw",
-                    "postCode": "50-001",
+                    "postcode": "50-001",
                     "street": "Grabiszynska",
                     "country": "Poland"
-                  }
+                  },
+                  "version": 0
                 }
                 """;
+    }
+
+    private String updateCompany_WithVersion() {
+        return """
+        {
+          "contactType": "COMPANY",
+          "version": %d,
+          "companyName": "My update for ACME",
+          "taxId": "999999",
+          "displayName": "ACME",
+          "bankAccountNumber": "PL123",
+          "address": {
+            "country": "PL",
+            "postcode": "50-001",
+            "city": "Wroclaw",
+            "street": "Market Square"
+          },
+          "tags": ["A","B"]
+        }
+        """;
     }
 }

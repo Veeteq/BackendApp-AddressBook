@@ -13,6 +13,9 @@ IMAGE_NAME="addressbook-app"
 IMAGE_TAG=latest
 
 NETWORK_NAME="backend-network"
+HOST_NAME="localhost"
+HOST_PORT="8383"
+CONTAINER_PORT="8080"
 
 HOST_NAME=localhost
 HOST_PORT=8383
@@ -95,7 +98,7 @@ fi
 # ------------------------------------------------------------
 # Build Docker image
 # ------------------------------------------------------------
-# echo "Building Docker image: ${IMAGE_NAME}"
+echo "Building Docker image: ${IMAGE_NAME}"
 
 docker build \
   --progress=plain \
