@@ -1,24 +1,19 @@
-server:
-  address: 0.0.0.0
-  port: 8083
-
 spring:
-  application:
-    name: addressbook
-
   datasource:
     continue-on-error: true
     url: jdbc:h2:mem:addressbook;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=Oracle
     driver-class-name: org.h2.Driver
     username: sa
     password:
+    testWhileIdle: true
+    validationQuery: SELECT 1
 
   jpa:
     open-in-view: false
-    defer-datasource-initialization: true
+    defer-datasource-initialization: false
     hibernate:
-      ddl-auto: none
-    show-sql: false
+      ddl-auto: validate
+    show-sql: true
     database-platform: org.hibernate.dialect.H2Dialect
     properties:
       hibernate:
@@ -28,6 +23,7 @@ spring:
     init:
       mode: embedded
       schema-locations: classpath:data/schema.sql
+      data-locations: classpath:data/data-*.sql
 
   h2:
     console:
@@ -35,3 +31,10 @@ spring:
       path: /h2-console
       settings.trace: false
       settings.web-allow-others: false
+
+logging:
+  level:
+    sql: debug
+    org.springframework.jdbc.datasource.init: DEBUG
+    org.springframework.boot.sql.init: DEBUG
+    org.hibernate.orm.jdbc.bind: trace

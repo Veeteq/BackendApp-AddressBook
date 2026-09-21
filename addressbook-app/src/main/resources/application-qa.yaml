@@ -3,7 +3,9 @@ spring:
     username: ${DB_USER}
     password: ${DB_PASSWORD}
     driver-class-name: oracle.jdbc.OracleDriver
-    url: jdbc:oracle:thin:@//192.168.56.102:1521/XEPDB1
+    url: jdbc:oracle:thin:@//${DB_HOST:localhost}:${DB_PORT:1521}/${DB_NAME:XEPDB1}
+    testWhileIdle: true
+    validationQuery: SELECT 1
     hikari:
       minimumIdle: 5
       maximum-pool-size: 5
@@ -19,4 +21,6 @@ spring:
     show-sql: true
     open-in-view: false
     database-platform: org.hibernate.dialect.OracleDialect
-
+    properties:
+      hibernate:
+        format_sql: true
