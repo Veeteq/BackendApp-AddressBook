@@ -5,7 +5,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile(value = "default")
+@Profile(value = {"default", "test"})
 public class UtilityRepositoryBase implements UtilityRepository {
 
     private final EntityManager entityManager;
