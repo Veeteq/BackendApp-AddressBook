@@ -10,14 +10,11 @@ AUTH_JWKS_URI=http://authorization-app:8080/.well-known/jwks.json
 
 APP_NAME="addressbook-app"
 IMAGE_NAME="addressbook-app"
-IMAGE_TAG=latest
+IMAGE_TAG="latest"
 
 NETWORK_NAME="backend-network"
 HOST_NAME="localhost"
-HOST_PORT="8383"
-CONTAINER_PORT="8080"
 
-HOST_NAME=localhost
 HOST_PORT=8383
 CONTAINER_PORT=8080
 
