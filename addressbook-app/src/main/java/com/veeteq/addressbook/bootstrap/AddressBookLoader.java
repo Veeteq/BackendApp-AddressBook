@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Component
-@Profile(value = "default")
+@Profile(value = {"default", "test"})
 public class AddressBookLoader implements ApplicationRunner {
 
     private final ContactRepository contactRepository;

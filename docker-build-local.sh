@@ -1,8 +1,13 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
+
+# ------------------------------------------------------------
+# Configuration
+# ------------------------------------------------------------
 
 AUTH_JWKS_URI=http://authorization-app:8080/.well-known/jwks.json
+
 APP_NAME="addressbook-app"
 IMAGE_NAME="addressbook-app"
 IMAGE_TAG="latest"
