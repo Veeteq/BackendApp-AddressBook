@@ -45,7 +45,7 @@ public abstract class Contact extends BaseEntity {
 
     @Transient
     public String getContactType() {
-        DiscriminatorValue discriminatorValue = this.getClass().getAnnotation(DiscriminatorValue.class);
+        var discriminatorValue = this.getClass().getAnnotation(DiscriminatorValue.class);
         return discriminatorValue == null ? null : discriminatorValue.value();
     }
 

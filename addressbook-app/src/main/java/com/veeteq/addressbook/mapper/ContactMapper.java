@@ -70,7 +70,7 @@ public interface ContactMapper {
         };
     }
 
-    default Contact toEntity(ContactRequestDto dto) {
+    default Contact toEntity(CreateContactRequestDto dto) {
         return switch (dto) {
             case PersonRequestDto person -> toEntity(person);
             case CompanyRequestDto company -> toEntity(company);
