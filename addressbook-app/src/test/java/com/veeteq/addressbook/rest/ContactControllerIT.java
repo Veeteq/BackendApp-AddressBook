@@ -19,25 +19,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-/*
-GET
-✓ shouldReturnContacts
-
-UPDATE
-✓ shouldUpdatePerson
-✓ shouldUpdateCompany
-✓ shouldReturn404WhenUpdatingMissingContact
-
-DELETE
-✓ shouldDeleteContact
-✓ shouldReturn404WhenDeletingMissingContact
-
-OPTIMISTIC LOCKING
-✓ shouldRejectStaleVersion
- */
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -209,10 +191,15 @@ class ContactControllerIT {
         // when + then
         mockMvc.perform(put("/api/addressbook/contacts/{id}", id)
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(requestBody)
-                )
+                                .content(requestBody))
                 .andDo(print())
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type").value("about:blank"))
+                .andExpect(jsonPath("$.title").value("Concurrent modification"))
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.detail").exists())
+                .andExpect(jsonPath("$.instance").exists());
     }
 
     @Test
@@ -237,6 +224,83 @@ class ContactControllerIT {
 
         var persisted = (Company) repository.findById(company.getId()).orElseThrow();
         assertThat(persisted.getName()).isEqualTo("My update for ACME");
+    }
+
+    @Test
+    void shouldReturnProblemDetailWhenContactDoesNotExist() throws Exception {
+        var id = 999999L;
+
+        mockMvc.perform(get("/api/addressbook/contacts/{id}", id))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type").value("about:blank"))
+                .andExpect(jsonPath("$.title").value("Contact not found"))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.detail").value("Contact not found: " + id))
+                .andExpect(jsonPath("$.instance").value("/api/addressbook/contacts/" + id))
+                .andExpect(jsonPath("$.code").value("CONTACT_NOT_FOUND"));;
+    }
+
+    @Test
+    void shouldReturnProblemDetailWhenChangingContactType() throws Exception {
+        var contact = repository.findAll().stream()
+                .filter(c -> c.getContactType().equalsIgnoreCase("Person"))
+                .findFirst()
+                .orElseThrow();
+        var request = updateCompany_WithVersion();
+
+        mockMvc.perform(put("/api/addressbook/contacts/{id}", contact.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type").value("about:blank"))
+                .andExpect(jsonPath("$.title").value("Contact type change not allowed"))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.detail").value("Changing contact type is not supported"))
+                .andExpect(jsonPath("$.instance").exists())
+                .andExpect(jsonPath("$.code").value("CONTACT_TYPE_CHANGE_NOT_ALLOWED"));;
+    }
+
+    @Test
+    void shouldReturnBadRequestProblemDetailWhenContactValidationFails() throws Exception {
+        var request = """
+            {
+              "contactType": "PERSON",
+              "firstName": "A",
+              "lastName": "Smith"
+            }
+            """;
+
+        mockMvc.perform(post("/api/addressbook/contacts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.title").value("Validation failed"))
+                .andExpect(jsonPath("$.detail").value("Request validation failed"))
+                .andExpect(jsonPath("$.errors.firstName").exists())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));;
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenContactTypeIsInvalid() throws Exception {
+        var request = """
+            {
+              "contactType": "abc"
+            }
+            """;
+
+        mockMvc.perform(post("/api/addressbook/contacts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.title").value("Invalid request body"))
+                .andExpect(jsonPath("$.detail").value("Request body could not be read"))
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST_BODY"));;
     }
 
     private String personJson() {
@@ -298,7 +362,7 @@ class ContactControllerIT {
         return """
         {
           "contactType": "COMPANY",
-          "version": %d,
+          "version": 0,
           "companyName": "My update for ACME",
           "taxId": "999999",
           "displayName": "ACME",

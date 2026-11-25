@@ -5,6 +5,7 @@ import com.veeteq.addressbook.rest.api.ContactsApi;
 import com.veeteq.addressbook.rest.dto.ContactDto;
 import com.veeteq.addressbook.rest.dto.ContactRequestDto;
 import com.veeteq.addressbook.rest.dto.ContactsResponseDto;
+import com.veeteq.addressbook.rest.dto.CreateContactRequestDto;
 import com.veeteq.addressbook.service.ContactService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ConcurrentModificationException;
 import java.util.List;
 
 @RestController
@@ -34,14 +34,13 @@ public class ContactController implements ContactsApi {
     }
 
     @Override
-    public ResponseEntity<ContactDto> createContact(@RequestBody ContactRequestDto dto) {
+    public ResponseEntity<ContactDto> createContact(@RequestBody CreateContactRequestDto dto) {
         var response = contactService.create(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @Override
     public ResponseEntity<ContactDto> getContactById(@PathVariable(name = "id", required = true) Long id) {
-
         var response = contactService.getContactById(id);
         return ResponseEntity.ok().body(response);
     }
@@ -66,26 +65,13 @@ public class ContactController implements ContactsApi {
 
     @Override
     public ResponseEntity<ContactDto> updateContact(@PathVariable(name = "id", required = true) Long id, @RequestBody ContactRequestDto dto) {
-
-        try {
-            var response = contactService.updateContactById(id, dto);
-            return ResponseEntity.ok().body(response);
-        } catch (ConcurrentModificationException exc) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        } catch (RuntimeException exc) {
-            return ResponseEntity.notFound().build();
-        }
+        var response = contactService.updateContactById(id, dto);
+        return ResponseEntity.ok().body(response);
     }
 
     @Override
     public ResponseEntity<Void> deleteContact(@PathVariable(name = "id", required = true) Long id) {
-
-        try {
-            contactService.deleteContactById(id);
-            return ResponseEntity.noContent().build();
-        } catch (RuntimeException exc) {
-            return ResponseEntity.notFound().build();
-        }
-
+        contactService.deleteContactById(id);
+        return ResponseEntity.noContent().build();
     }
 }

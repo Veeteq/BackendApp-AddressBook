@@ -1,0 +1,10 @@
+package com.veeteq.addressbook.exception;
+
+public enum ErrorCode {
+    CONTACT_NOT_FOUND,
+    CONCURRENT_MODIFICATION,
+    CONTACT_TYPE_CHANGE_NOT_ALLOWED,
+    VALIDATION_FAILED,
+    INVALID_REQUEST_BODY,
+    INTERNAL_SERVER_ERROR
+}

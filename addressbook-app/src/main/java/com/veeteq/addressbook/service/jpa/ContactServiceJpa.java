@@ -1,5 +1,7 @@
 package com.veeteq.addressbook.service.jpa;
 
+import com.veeteq.addressbook.exception.ContactNotFoundException;
+import com.veeteq.addressbook.exception.ContactTypeChangeException;
 import com.veeteq.addressbook.mapper.ContactMapper;
 import com.veeteq.addressbook.model.Company;
 import com.veeteq.addressbook.model.Contact;
@@ -44,12 +46,12 @@ public class ContactServiceJpa implements ContactService {
     public ContactDto getContactById(Long id) {
         return contactRepository.findById(id)
                 .map(contactMapper::toDto)
-                .orElseThrow(() -> new IllegalArgumentException("Unable to find contact with id: " + id));
+                .orElseThrow(() -> new ContactNotFoundException(id));
     }
 
     @Override
     @Transactional
-    public ContactDto create(ContactRequestDto dto) {
+    public ContactDto create(CreateContactRequestDto dto) {
         var entity = contactMapper.toEntity(dto);
         var id = utilityRepository.nextId();
         entity.setId(id);
@@ -61,7 +63,7 @@ public class ContactServiceJpa implements ContactService {
     @Transactional
     public ContactDto updateContactById(Long id, ContactRequestDto dto) {
         var contact = contactRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Contact %d not found".formatted(id)));
+                .orElseThrow(() -> new ContactNotFoundException(id));
         validateType(contact, dto);
         var updated = contactMapper.updateEntity(contact, dto);
         var saved = contactRepository.save(updated);
@@ -70,7 +72,7 @@ public class ContactServiceJpa implements ContactService {
 
     @Override
     public void deleteContactById(Long id) {
-        if (!contactRepository.existsById(id)) throw new IllegalArgumentException("Contact %d not found".formatted(id));
+        if (!contactRepository.existsById(id)) throw new ContactNotFoundException(id);
         contactRepository.deleteById(id);
     }
 
@@ -90,7 +92,7 @@ public class ContactServiceJpa implements ContactService {
 
         if (contact instanceof Person person && dto instanceof PersonRequestDto personDto) return;
         if (contact instanceof Company company && dto instanceof CompanyRequestDto companyDto) return;
-        throw new IllegalArgumentException("Changing contact type is not supported");
+        throw new ContactTypeChangeException();
     }
 
 }
